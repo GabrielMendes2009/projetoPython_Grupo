@@ -182,7 +182,7 @@ class Prato:
 
     def __str__(self):
         cat = f" ({self.categoria})" if self.categoria else ""
-        return f"{self.nome}{cat}: {self.descricao} - R$ {self.preco:.2f}"
+        return f"{self.nome}{cat}: {self.descricao} - € {self.preco:.2f}"
 
 
 class MenuApp:
