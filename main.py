@@ -1,8 +1,30 @@
+"""
+Nome: Gabriel Mendes, Diogo Dias, Rodrigo Pereira
+Turma: PIPL0924
+Trabalho: Projeto de Gestão de Restaurante
+"""
+
+def pedir_int(msg):
+    while True:
+        valor = input(msg)
+        if valor.isdigit():
+            return int(valor)
+        print("Erro: digite um número inteiro.\n")
+
+def pedir_float(msg):
+    while True:
+        valor = input(msg)
+        try:
+            return float(valor)
+        except ValueError:
+            print("Erro: digite um número válido (ex: 12.50).\n")
+
 class Reserva:
     def __init__(self, cliente, num_pessoas, data_hora):
         self.cliente = cliente
         self.num_pessoas = num_pessoas
         self.data_hora = data_hora
+
 
 class Pedido:
     def __init__(self, cliente, data_hora, pratos):
@@ -10,9 +32,15 @@ class Pedido:
         self.data_hora = data_hora
         self.pratos = pratos
         self.estado = "Pendente"
+
     def __str__(self):
         pratos_str = ", ".join([p.nome for p in self.pratos])
         return f"Cliente: {self.cliente}, Hora: {self.data_hora}, Pratos: {pratos_str}, Estado: {self.estado}"
+
+    def atualizar_estado(self, novo_estado):
+        if novo_estado in ["Pendente", "Em preparação", "Concluído"]:
+            self.estado = novo_estado
+
 
 class Restaurante:
     def __init__(self, nome):
@@ -20,8 +48,8 @@ class Restaurante:
         self.horario = "08:00 - 22:00"
         self.max_clientes_por_hora = 50
         self.menu = []
-        self.pedidos = []
         self.reservas = []
+        self.pedidos = []
 
     def definir_horario(self, novo_horario):
         self.horario = novo_horario
@@ -31,36 +59,73 @@ class Restaurante:
 
     def adicionar_prato(self, prato):
         self.menu.append(prato)
+        print(f"Prato '{prato.nome}' adicionado com sucesso.\n")
 
     def remover_prato(self, nome_prato):
-        self.menu = [prato for prato in self.menu if prato.nome != nome_prato]
+        encontrado = False
+        for p in self.menu:
+            if p.nome == nome_prato:
+                self.menu.remove(p)
+                print(f"Prato '{nome_prato}' removido com sucesso.\n")
+                encontrado = True
+                break
+        if not encontrado:
+            print(f"Erro: prato '{nome_prato}' não existe no menu.\n")
 
-    def consultar_pedidos(self):
-        return self.pedidos
+    def atualizar_preco_prato(self, nome_prato, novo_preco):
+        encontrado = False
+        for p in self.menu:
+            if p.nome == nome_prato:
+                p.preco = novo_preco
+                print(f"Preço do prato '{nome_prato}' atualizado para R$ {novo_preco:.2f}.\n")
+                encontrado = True
+                break
+        if not encontrado:
+            print(f"Erro: prato '{nome_prato}' não existe.\n")
 
     def consultar_menu(self):
         return self.menu
 
     def fazer_reserva(self, cliente, num_pessoas, data_hora):
-        total_reservado = sum(r.num_pessoas for r in self.reservas if r.data_hora == data_hora)
-        if total_reservado + num_pessoas > self.max_clientes_por_hora:
+        total = sum(r.num_pessoas for r in self.reservas if r.data_hora == data_hora)
+        if total + num_pessoas > self.max_clientes_por_hora:
+            restante = self.max_clientes_por_hora - total
+            print(f"Erro: capacidade máxima excedida. Só há espaço para {restante} pessoas nesse horário.\n")
             return None
         reserva = Reserva(cliente, num_pessoas, data_hora)
         self.reservas.append(reserva)
+        print(f"Reserva criada para {cliente}, {num_pessoas} pessoas às {data_hora}.\n")
         return reserva
 
     def pedir_pratos(self, cliente, data_hora, nomes_pratos):
         reserva = next((r for r in self.reservas if r.cliente == cliente and r.data_hora == data_hora), None)
         if not reserva:
+            print("Erro: não há reserva com esse nome nesse horário.\n")
             return None
-        pratos = [p for p in self.menu if p.nome in nomes_pratos]
+
+        pratos = []
+        invalidos = []
+        for nome in nomes_pratos:
+            prato = next((p for p in self.menu if p.nome == nome), None)
+            if prato:
+                pratos.append(prato)
+            else:
+                invalidos.append(nome)
+
+        if invalidos:
+            print("Erro: os seguintes pratos não existem no menu:")
+            for p in invalidos:
+                print(f"- {p}")
+            print("")
+            return None
+
         pedido = Pedido(cliente, data_hora, pratos)
         self.pedidos.append(pedido)
+        print(f"Pedido registrado para {cliente} às {data_hora}.\n")
         return pedido
 
-    def consultar_reservas(self):
-        return self.reservas
-    
+    def consultar_pedidos(self):
+        return self.pedidos
 
 
 class Cliente:
@@ -77,26 +142,36 @@ class Cliente:
     def pedir_pratos(self, data_hora, nomes_pratos):
         return self.restaurante.pedir_pratos(self.nome, data_hora, nomes_pratos)
 
+
 class Gestor:
-    def __init__(self, restaurante):
+    def __init__(self, restaurante, password="1234"):
         self.restaurante = restaurante
+        self.password = password
+
+    def autenticar(self):
+        senha = input("Digite a password do gestor: ")
+        return senha == self.password
 
     def definir_horario(self, novo_horario):
         self.restaurante.definir_horario(novo_horario)
+        print(f"Horário definido para {novo_horario}.\n")
 
     def definir_max_clientes(self, max_clientes):
         self.restaurante.definir_max_clientes(max_clientes)
+        print(f"Capacidade máxima definida para {max_clientes} clientes/hora.\n")
 
-    def adicionar_prato(self, nome, preco):
-        prato = Prato(nome, preco)
-        self.restaurante.adicionar_prato(prato)
+    def adicionar_prato(self, nome, preco, descricao="", categoria=None):
+        self.restaurante.adicionar_prato(Prato(nome, preco, descricao, categoria))
 
     def remover_prato(self, nome_prato):
         self.restaurante.remover_prato(nome_prato)
 
+    def atualizar_preco_prato(self, nome_prato, novo_preco):
+        self.restaurante.atualizar_preco_prato(nome_prato, novo_preco)
+
     def consultar_pedidos(self):
         return self.restaurante.consultar_pedidos()
-    
+
 
 class Prato:
     def __init__(self, nome, preco, descricao="", categoria=None):
@@ -104,9 +179,10 @@ class Prato:
         self.preco = preco
         self.descricao = descricao
         self.categoria = categoria
+
     def __str__(self):
         cat = f" ({self.categoria})" if self.categoria else ""
-        return f"{self.nome}{cat}: {self.descricao} - € {self.preco:.2f}"
+        return f"{self.nome}{cat}: {self.descricao} - R$ {self.preco:.2f}"
 
 
 class MenuApp:
@@ -116,110 +192,107 @@ class MenuApp:
 
     def mostrar_menu_principal(self):
         while True:
-            print("\n--- Menu Principal ---")
-            print("1. Menu do Gestor")
-            print("2. Menu do Cliente")
-            print("3. Sair")
+            print("\n=== MENU PRINCIPAL ===")
+            print("1. Entrar como Gestor")
+            print("2. Entrar como Cliente")
+            print("0. Sair")
             escolha = input("Escolha uma opção: ")
 
-            if escolha == '1':
-                self.mostrar_menu_gestor()
-            elif escolha == '2':
+            if escolha == "1":
+                if self.gestor.autenticar():
+                    self.mostrar_menu_gestor()
+                else:
+                    print("Senha incorreta.\n")
+            elif escolha == "2":
                 self.mostrar_menu_cliente()
-            elif escolha == '3':
+            elif escolha == "0":
+                print("Encerrando aplicação...")
                 break
             else:
-                print("Opção inválida. Tente novamente.")
+                print("Opção inválida.\n")
 
     def mostrar_menu_gestor(self):
         while True:
-            print("\n--- Menu do Gestor ---")
-            print("1. Definir horário do restaurante")
-            print("2. Definir número máximo de clientes por hora")
-            print("3. Adicionar prato ao menu")
-            print("4. Remover prato do menu")
-            print("5. Consultar lista de pedidos")
-            print("6. Voltar ao Menu Principal")
-            escolha = input("Escolha uma opção: ")
+            print("\n--- MENU DO GESTOR ---")
+            print("1. Definir horário")
+            print("2. Definir capacidade máxima")
+            print("3. Adicionar prato")
+            print("4. Remover prato")
+            print("5. Atualizar preço de prato")
+            print("6. Consultar pedidos")
+            print("0. Voltar")
+            escolha = input("Escolha: ")
 
-            if escolha == '1':
-                novo_horario = input("Digite o novo horário (ex.: 08:00 - 22:00): ")
-                self.gestor.definir_horario(novo_horario)
-                print("Horário atualizado.")
-            elif escolha == '2':
-                max_clientes = int(input("Digite o número máximo de clientes por hora: "))
-                self.gestor.definir_max_clientes(max_clientes)
-                print("Número máximo de clientes atualizado.")
-            elif escolha == '3':
-                nome_prato = input("Digite o nome do prato: ")
-                preco_prato = float(input("Digite o preço do prato: "))
-                descricao = input("Digite a descrição do prato: ")
-                categoria = input("Digite a categoria (opcional): ")
-                categoria = categoria if categoria else None
-                prato = Prato(nome_prato, preco_prato, descricao, categoria)
-                self.gestor.restaurante.adicionar_prato(prato)
-                print("Prato adicionado ao menu.")
-            elif escolha == '4':
-                nome_prato = input("Digite o nome do prato a ser removido: ")
-                self.gestor.remover_prato(nome_prato)
-                print("Prato removido do menu.")
-            elif escolha == '5':
+            if escolha == "1":
+                novo = input("Novo horário (ex: 08:00 - 22:00): ")
+                self.gestor.definir_horario(novo)
+            elif escolha == "2":
+                max_c = pedir_int("Máx clientes/hora: ")
+                self.gestor.definir_max_clientes(max_c)
+            elif escolha == "3":
+                nome = input("Nome do prato: ")
+                preco = pedir_float("Preço: ")
+                desc = input("Descrição: ")
+                cat = input("Categoria: ")
+                self.gestor.adicionar_prato(nome, preco, desc, cat)
+            elif escolha == "4":
+                nome = input("Nome do prato a remover: ")
+                self.gestor.remover_prato(nome)
+            elif escolha == "5":
+                nome = input("Nome do prato: ")
+                preco = pedir_float("Novo preço: ")
+                self.gestor.atualizar_preco_prato(nome, preco)
+            elif escolha == "6":
                 pedidos = self.gestor.consultar_pedidos()
-                if pedidos:
-                    print("Lista de Pedidos:")
-                    for pedido in pedidos:
-                        print(pedido)
+                if not pedidos:
+                    print("Nenhum pedido registrado.\n")
                 else:
-                    print("Nenhum pedido registrado.")
-            elif escolha == '6':
+                    print("\n--- PEDIDOS ---")
+                    for p in pedidos:
+                        print(p)
+                    print("")
+            elif escolha == "0":
                 break
             else:
-                print("Opção inválida. Tente novamente.")
+                print("Opção inválida.\n")
 
     def mostrar_menu_cliente(self):
-        nome_cliente = input("Digite seu nome: ")
-        cliente = Cliente(nome_cliente, self.restaurante)
+        nome = input("Nome do cliente: ")
+        cliente = Cliente(nome, self.restaurante)
+
         while True:
-            print("\n--- Menu do Cliente ---")
-            print("1. Consultar menu do restaurante")
+            print("\n--- MENU DO CLIENTE ---")
+            print("1. Consultar menu")
             print("2. Fazer reserva")
             print("3. Pedir pratos")
-            print("4. Voltar ao Menu Principal")
-            escolha = input("Escolha uma opção: ")
+            print("0. Voltar")
+            escolha = input("Escolha: ")
 
-            if escolha == '1':
-                pratos = cliente.consultar_menu()
-                if pratos:
-                    print("Menu do Restaurante:")
-                    for prato in pratos:
+            if escolha == "1":
+                menu = cliente.consultar_menu()
+                if not menu:
+                    print("Menu vazio.\n")
+                else:
+                    print("\n--- MENU ---")
+                    for prato in menu:
                         print(prato)
-                else:
-                    print("Menu vazio.")
-            elif escolha == '2':
-                num_pessoas = int(input("Número de pessoas: "))
-                data_hora = input("Data e hora da reserva (ex: 2025-11-19 19:00): ")
-                reserva = cliente.fazer_reserva(num_pessoas, data_hora)
-                if reserva:
-                    print("Reserva realizada com sucesso!")
-                else:
-                    print("Não há capacidade disponível para essa hora.")
-            elif escolha == '3':
-                data_hora = input("Data e hora da reserva para o pedido: ")
-                nomes_pratos = input("Digite os nomes dos pratos separados por vírgula: ").split(",")
-                nomes_pratos = [n.strip() for n in nomes_pratos]
-                pedido = cliente.pedir_pratos(data_hora, nomes_pratos)
-                if pedido:
-                    print("Pedido realizado com sucesso!")
-                else:
-                    print("Reserva não encontrada para esse horário ou pratos inválidos.")
-            elif escolha == '4':
+                    print("")
+            elif escolha == "2":
+                num = pedir_int("Número de pessoas: ")
+                data_hora = input("Data e hora (AAAA-MM-DD HH:MM): ")
+                cliente.fazer_reserva(num, data_hora)
+            elif escolha == "3":
+                data_hora = input("Data e hora da reserva: ")
+                nomes = input("Pratos separados por vírgula: ").split(",")
+                nomes = [n.strip() for n in nomes]
+                cliente.pedir_pratos(data_hora, nomes)
+            elif escolha == "0":
                 break
             else:
-                print("Opção inválida. Tente novamente.")
-
+                print("Opção inválida.\n")
 
 if __name__ == "__main__":
-    restaurante = Restaurante("Restaurante Exemplo")
+    restaurante = Restaurante("Restaurante Simples")
     gestor = Gestor(restaurante)
-    menu_app = MenuApp(gestor, restaurante)
-    menu_app.mostrar_menu_principal()
+    app = MenuApp(gestor, restaurante)
+    app.mostrar_menu_principal()
