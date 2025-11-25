@@ -75,7 +75,6 @@ class Restaurante:
         self.pedidos = []
 
     # --- Métodos de Configuração ---
-
     def definir_horario(self, novo_horario):
         """Define um novo horário de funcionamento."""
         self.horario = novo_horario
@@ -85,7 +84,6 @@ class Restaurante:
         self.max_clientes_por_hora = max_clientes
 
     # --- Métodos de Gestão de Menu ---
-
     def adicionar_prato(self, prato):
         """Adiciona um objeto Prato ao menu."""
         self.menu.append(prato)
@@ -377,4 +375,3 @@ if __name__ == "__main__":
     # 4. Inicia o loop principal da aplicação
     app.mostrar_menu_principal()
 
-    
